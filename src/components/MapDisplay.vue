@@ -111,7 +111,7 @@ export default defineComponent({
       });
 
       // Fetch GeoJSON at runtime
-      const response = await fetch('/src/assets/geoBoundaries-KHM-ADM1.geojson');
+      const response = await fetch('/geoBoundaries-KHM-ADM1.geojson');
       const geojson = await response.json();
 
       // Add GeoJSON layer with heatmap coloring
