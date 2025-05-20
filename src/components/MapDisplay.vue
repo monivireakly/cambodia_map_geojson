@@ -2,6 +2,7 @@
   <div class="map-container">
     <div id="mapid" style="height: 800px; width: 100%; background: #e3f2fd; position: relative;"></div>
     <div v-if="selectedProvinceData" class="info-panel">
+      <button class="close-btn" @click="closePanel" title="Close (Esc)">×</button>
       <h3>{{ selectedProvinceData.shapeName }}</h3>
       <p><strong>ISO:</strong> {{ selectedProvinceData.shapeISO }}</p>
       <p><strong>ID:</strong> {{ selectedProvinceData.shapeID }}</p>
@@ -37,7 +38,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref } from 'vue';
+import { defineComponent, onMounted, onUnmounted, ref } from 'vue';
 import type { Ref } from 'vue';
 import L, { GeoJSON, Map as LeafletMap, Layer } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -98,7 +99,19 @@ export default defineComponent({
     maxLoans.value = Math.max(...loanValues);
     colorScale.value = Array.from({length: 7}, (_,i) => interpolateSkyBlue(i/6));
 
+    const closePanel = () => {
+      selectedProvinceData.value = null;
+    };
+
+    // Escape key handler
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedProvinceData.value) {
+        closePanel();
+      }
+    };
+
     onMounted(async () => {
+      window.addEventListener('keydown', handleKeydown);
       mapInstance.value = L.map('mapid', {
         zoomControl: true,
         attributionControl: false,
@@ -220,11 +233,16 @@ export default defineComponent({
       } catch (e) {}
     });
 
+    onUnmounted(() => {
+      window.removeEventListener('keydown', handleKeydown);
+    });
+
     return {
       selectedProvinceData,
       colorScale,
       minLoans,
       maxLoans,
+      closePanel,
     };
   },
 });
@@ -253,6 +271,7 @@ export default defineComponent({
   color: #222;
   font-size: 15px;
   word-break: break-word;
+  position: relative;
 }
 .info-panel h3 {
   margin-top: 0;
@@ -342,5 +361,21 @@ export default defineComponent({
   line-height: 1.2;
   white-space: nowrap;
   opacity: 0.95;
+}
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  color: #01579b;
+  cursor: pointer;
+  font-weight: bold;
+  z-index: 10;
+  transition: color 0.2s;
+}
+.close-btn:hover {
+  color: #c62828;
 }
 </style> 
