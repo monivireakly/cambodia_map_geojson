@@ -2,7 +2,7 @@
 
 A beautiful, interactive dashboard visualizing mock loan data by province for Cambodia, built with Vue 3, TypeScript, Vite, and Leaflet. The map uses a sky-blue heatmap to show total loans, with province labels, tooltips, and a detailed info panel.
 
-![Screenshot](screenshot.png)
+![Screenshot](screenshot.png.png) <!-- Replace with your screenshot path or URL -->
 
 ## Features
 - Interactive map of Cambodia's provinces (GeoJSON boundaries)

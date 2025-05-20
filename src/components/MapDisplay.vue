@@ -37,10 +37,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref, Ref } from 'vue';
+import { defineComponent, onMounted, ref } from 'vue';
+import type { Ref } from 'vue';
 import L, { GeoJSON, Map as LeafletMap, Layer } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { mockLoanData, LoanInfo } from '../lib/mockLoanData';
+import { mockLoanData } from '../lib/mockLoanData';
+import type { LoanInfo } from '../lib/mockLoanData';
 
 interface SelectedProvince {
   shapeName: string;
@@ -86,12 +88,12 @@ export default defineComponent({
 
     // Combine loan data into a lookup map for efficiency
     const loanDataMap = new Map<string, LoanInfo>();
-    mockLoanData.forEach(loan => {
+    mockLoanData.forEach((loan: LoanInfo) => {
       loanDataMap.set(loan.provinceName, loan);
     });
 
     // Compute min/max for color scale
-    const loanValues = mockLoanData.map(l => l.totalLoans);
+    const loanValues = mockLoanData.map((l: LoanInfo) => l.totalLoans);
     minLoans.value = Math.min(...loanValues);
     maxLoans.value = Math.max(...loanValues);
     colorScale.value = Array.from({length: 7}, (_,i) => interpolateSkyBlue(i/6));
@@ -105,7 +107,6 @@ export default defineComponent({
         dragging: false,
         scrollWheelZoom: false,
         keyboard: false,
-        tap: false,
         touchZoom: false,
       });
 
@@ -115,7 +116,7 @@ export default defineComponent({
 
       // Add GeoJSON layer with heatmap coloring
       const geoJsonLayer: GeoJSON = L.geoJSON(geojson, {
-        style: (feature) => {
+        style: (feature: any) => {
           const properties = feature?.properties || {};
           const loanInfo = loanDataMap.get(properties.shapeName);
           let fillColor = '#e0f7fa';
@@ -133,7 +134,7 @@ export default defineComponent({
             fillOpacity: 0.85,
           };
         },
-        onEachFeature: (feature, layer) => {
+        onEachFeature: (feature: any, layer: Layer) => {
           const properties = feature.properties || {};
           const geometry = feature.geometry || {};
           const loanInfo = loanDataMap.get(properties.shapeName);
@@ -145,51 +146,61 @@ export default defineComponent({
           }
           layer.bindTooltip(tooltipContent, { direction: 'top', sticky: true, className: 'province-tooltip' });
           layer.on({
-            mouseover: (e) => {
+            mouseover: (e: any) => {
               const l = e.target;
               l.setStyle({ weight: 3, color: '#333', fillOpacity: 1 });
               l.openTooltip();
             },
-            mouseout: (e) => {
+            mouseout: (e: any) => {
               geoJsonLayer.resetStyle(e.target as Layer);
               (e.target as any).closeTooltip();
             },
-            click: (e) => {
-              selectedProvinceData.value = {
-                shapeName: properties.shapeName,
-                shapeISO: properties.shapeISO,
-                shapeID: properties.shapeID,
-                shapeGroup: properties.shapeGroup,
-                shapeType: properties.shapeType,
-                geometryType: geometry.type,
-                coordinates: JSON.stringify(geometry.coordinates, null, 2),
-                loanInfo: loanInfo,
-              };
+            click: () => {
+              if ('coordinates' in geometry) {
+                selectedProvinceData.value = {
+                  shapeName: properties.shapeName,
+                  shapeISO: properties.shapeISO,
+                  shapeID: properties.shapeID,
+                  shapeGroup: properties.shapeGroup,
+                  shapeType: properties.shapeType,
+                  geometryType: geometry.type,
+                  coordinates: JSON.stringify(geometry.coordinates, null, 2),
+                  loanInfo: loanInfo,
+                };
+              } else {
+                selectedProvinceData.value = {
+                  shapeName: properties.shapeName,
+                  shapeISO: properties.shapeISO,
+                  shapeID: properties.shapeID,
+                  shapeGroup: properties.shapeGroup,
+                  shapeType: properties.shapeType,
+                  geometryType: geometry.type,
+                  coordinates: 'N/A',
+                  loanInfo: loanInfo,
+                };
+              }
             },
           });
         },
       });
-      geoJsonLayer.addTo(mapInstance.value);
+      geoJsonLayer.addTo(mapInstance.value!);
 
       // Add province name labels at centroid
-      function getCentroid(coords) {
-        // Handles both Polygon and MultiPolygon
-        let points = [];
+      function getCentroid(coords: any): [number, number] {
+        let points: number[][] = [];
         if (Array.isArray(coords[0][0][0])) {
-          // MultiPolygon
-          coords.forEach(poly => poly[0].forEach(pt => points.push(pt)));
+          (coords as any[][][]).forEach((poly: any[][]) => (poly[0] as number[][]).forEach((pt: number[]) => points.push(pt)));
         } else {
-          // Polygon
-          coords[0].forEach(pt => points.push(pt));
+          (coords[0] as number[][]).forEach((pt: number[]) => points.push(pt));
         }
         let x = 0, y = 0, n = points.length;
-        points.forEach(pt => { x += pt[0]; y += pt[1]; });
-        return [y/n, x/n]; // [lat, lng]
+        points.forEach((pt: number[]) => { x += pt[0]; y += pt[1]; });
+        return [y/n, x/n];
       }
-      geojson.features.forEach(feature => {
+      (geojson.features as any[]).forEach((feature: any) => {
         const properties = feature.properties || {};
         const geometry = feature.geometry || {};
-        if (!geometry.coordinates) return;
+        if (!('coordinates' in geometry)) return;
         const centroid = getCentroid(geometry.coordinates);
         if (!centroid || isNaN(centroid[0]) || isNaN(centroid[1])) return;
         const labelIcon = L.divIcon({
@@ -198,14 +209,14 @@ export default defineComponent({
           iconSize: [100, 24],
           iconAnchor: [50, 12],
         });
-        const marker = L.marker(centroid, { icon: labelIcon, interactive: false });
+        const marker = L.marker(centroid as [number, number], { icon: labelIcon, interactive: false });
         marker.addTo(mapInstance.value!);
       });
 
       // Fit map to bounds
       try {
         const bounds = geoJsonLayer.getBounds();
-        mapInstance.value.fitBounds(bounds, { padding: [20, 20] }); // Or even more
+        mapInstance.value!.fitBounds(bounds, { padding: [20, 20] });
       } catch (e) {}
     });
 
